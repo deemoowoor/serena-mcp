@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COMPOSE_FILE="$(cd "$(dirname "$0")" && pwd)/docker-compose.yml"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+cd "$PROJECT_DIR"
+
+usage() {
+    cat <<EOF
+Usage: ./project <command>
+
+Commands:
+  start       Start Serena MCP server
+  stop        Stop Serena MCP server
+  restart     Restart Serena MCP server
+  status      Show container status
+  logs        Tail container logs
+  shell       Open a shell inside the container
+  dashboard   Open the Serena web dashboard
+  pull        Pull the latest Serena image
+  down        Stop and remove the container
+  help        Show this help message
+EOF
+}
+
+cmd_start() {
+    echo "Starting Serena MCP..."
+    mkdir -p projects
+    docker compose up -d
+    echo "Serena MCP is running."
+    echo "Dashboard: http://localhost:${SERENA_DASHBOARD_PORT:-24282}/dashboard"
+}
+
+cmd_stop() {
+    echo "Stopping Serena MCP..."
+    docker compose stop
+}
+
+cmd_restart() {
+    echo "Restarting Serena MCP..."
+    docker compose restart
+}
+
+cmd_status() {
+    docker compose ps
+}
+
+cmd_logs() {
+    docker compose logs -f
+}
+
+cmd_shell() {
+    docker compose exec serena bash
+}
+
+cmd_dashboard() {
+    local url="http://localhost:${SERENA_DASHBOARD_PORT:-24282}/dashboard"
+    echo "Opening dashboard: $url"
+    open "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || echo "Visit: $url"
+}
+
+cmd_pull() {
+    echo "Pulling latest Serena image..."
+    docker compose pull
+}
+
+cmd_down() {
+    echo "Stopping and removing Serena MCP..."
+    docker compose down
+}
+
+case "${1:-}" in
+    start)     cmd_start ;;
+    stop)      cmd_stop ;;
+    restart)   cmd_restart ;;
+    status)    cmd_status ;;
+    logs)      cmd_logs ;;
+    shell)     cmd_shell ;;
+    dashboard) cmd_dashboard ;;
+    pull)      cmd_pull ;;
+    down)      cmd_down ;;
+    help|--help|-h) usage ;;
+    *)
+        if [ -n "${1:-}" ]; then
+            echo "Unknown command: $1"
+            echo ""
+        fi
+        usage
+        exit 1
+        ;;
+esac
